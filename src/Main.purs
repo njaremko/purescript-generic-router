@@ -3,7 +3,8 @@ module Main
   ) where
 
 import Prelude
-import Data.Argonaut (stringify)
+
+import Data.Argonaut (encodeJson, stringify)
 import Data.Map as Map
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.String (Pattern(..), Replacement(..), replace)
@@ -16,8 +17,17 @@ import Deno.Http.Request as Request
 import Effect (Effect)
 import Effect.Aff (Aff, launchAff_)
 import Effect.Console (log)
-import Router (Context, makeRouter)
+import Router (Router, Context, makeRouter)
 import Router as Router
+
+type AppRouter
+  = Router ()
+
+type AppContext
+  = Context ()
+
+routeToContext :: Request -> {}
+routeToContext _req = {}
 
 main :: Effect Unit
 main = do
@@ -44,13 +54,14 @@ main = do
       makeRouter
         routes
         (pure $ createResponse "Not Found" (Just { headers: Just $ Map.fromFoldable [ Tuple "content-type" "text/plain" ], status: Just 404, statusText: Just "Not Found" }))
-        (\req -> { path: replace (Pattern baseUrl) (Replacement "") $ Request.url req })
+        (\req -> replace (Pattern baseUrl) (Replacement "") $ Request.url req)
+        routeToContext
 
     handler = Router.route router
   listener <- Deno.listen { port: 3001 }
   launchAff_ $ serveListener listener handler Nothing
 
-indexRoute :: Request → Context () -> Aff Response
+indexRoute :: Request → AppContext -> Aff Response
 indexRoute _req _ctx =
   let
     payload =
@@ -71,11 +82,11 @@ indexRoute _req _ctx =
   in
     pure $ createResponse payload response_options
 
-jsonEcho :: Request → Context () -> Aff Response
-jsonEcho req _ctx = do
+jsonEcho :: Request → AppContext -> Aff Response
+jsonEcho req { params } = do
   payload <- Request.json req
   let
     headers = Just $ Map.fromFoldable [ hContentTypeJson ]
 
     response_options = Just { headers, status: Nothing, statusText: Nothing }
-  pure $ createResponse (stringify payload) response_options
+  pure $ createResponse (stringify $ encodeJson $ params) response_options
