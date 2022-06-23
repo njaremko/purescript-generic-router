@@ -49,6 +49,7 @@ route (Router { routeMap, requestToPath, requestToContext, fallback }) request =
 
     Tuple matched handler = fromMaybe ((Tuple "" (\_req _ctx -> fallback))) $ List.head $ Map.toUnfoldable $ Map.filterKeys (\k -> routeMatch k path) routeMap
 
+    -- TODO match route and build params simulatanously
     params = buildParams matched path
 
     context = unsafeUnion partialContext { path, params }

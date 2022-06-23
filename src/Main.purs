@@ -3,7 +3,6 @@ module Main
   ) where
 
 import Prelude
-
 import Data.Argonaut (encodeJson, stringify)
 import Data.Map as Map
 import Data.Maybe (Maybe(..), fromMaybe)
@@ -84,7 +83,7 @@ indexRoute _req _ctx =
 
 jsonEcho :: Request → AppContext -> Aff Response
 jsonEcho req { params } = do
-  payload <- Request.json req
+  _payload <- Request.json req
   let
     headers = Just $ Map.fromFoldable [ hContentTypeJson ]
 
