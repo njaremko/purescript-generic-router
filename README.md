@@ -1,3 +1,16 @@
+# Generic Router
+
+This package provides a generic router, you just need to provide a function 
+that can parse a path from an arbitrary request, and optionally parse arbitrary context out of a request
+
+# How to use
+Here's an example using the `purescript-deno` package.
+
+Requires you to have [deno](https://deno.land) installed
+
+Put this in your `Main.purs` file:
+
+```purescript
 module Main
   ( main
   ) where
@@ -95,3 +108,20 @@ jsonEcho req { params } = do
 
     (casted :: Array (Tuple String String)) = fromRight [] $ decodeJson encodedAsTupleArray
   pure $ createResponse (stringify $ encodeJson $ Object.fromFoldable $ casted) response_options
+
+```
+
+Run the following:
+```sh
+spago build
+deno eval 'import { main } from "./output/Main/index.js"; main();'
+```
+
+Then open another terminal and run
+```sh
+curl -H "content-type: application/json" --data '{"x": 1}' localhost:3001/v1/projects/asdf/environments/fdsa/flags/asdf
+```
+Which will return
+```json
+[["environment","fdsa"],["flag","asdf"],["project","asdf"]]
+```
