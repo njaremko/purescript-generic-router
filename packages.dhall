@@ -103,24 +103,3 @@ let upstream =
         sha256:78caab14e4d8ff3886a057f0380c2d4a2500e2ee7ab5c1d32a0f9ce5c71eedd8
 
 in  upstream
-  with deno =
-    { dependencies =
-      [ "aff"
-      , "aff-promise"
-      , "argonaut"
-      , "arraybuffer-types"
-      , "console"
-      , "effect"
-      , "either"
-      , "functions"
-      , "maybe"
-      , "ordered-collections"
-      , "prelude"
-      , "strings"
-      , "tuples"
-      , "unsafe-coerce"
-      , "web-streams"
-      ]
-    , repo = "https://github.com/njaremko/purescript-deno.git"
-    , version = "v0.0.3"
-    }

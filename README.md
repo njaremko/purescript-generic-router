@@ -123,5 +123,5 @@ curl -H "content-type: application/json" --data '{"x": 1}' localhost:3001/v1/pro
 ```
 Which will return
 ```json
-[["environment","fdsa"],["flag","asdf"],["project","asdf"]]
+{"environment":"fdsa","flag":"asdf","project":"asdf"}
 ```

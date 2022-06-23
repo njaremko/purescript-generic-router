@@ -10,16 +10,12 @@ When creating a new Spago project, you can use
 `spago init --no-comments` or `spago init -C`
 to generate this file without the comments in this block.
 -}
-{ name = "my-project"
+{ name = "generic-router"
 , dependencies =
-  [ "aff"
-  , "argonaut"
-  , "arrays"
-  , "console"
-  , "deno"
+  [ "arrays"
+  , "assert"
   , "effect"
-  , "either"
-  , "foreign-object"
+  , "foldable-traversable"
   , "lists"
   , "maybe"
   , "ordered-collections"

@@ -1,12 +1,15 @@
 module Router
   ( Context
   , Router
+  , Route
   , makeRouter
+  , makeRoute
   , route
   ) where
 
 import Prelude
-import Data.Array (all, filter, zip)
+import Data.Array (all, any, zip, (!!))
+import Data.FoldableWithIndex (foldrWithIndex)
 import Data.List as List
 import Data.Map (Map)
 import Data.Map as Map
@@ -17,11 +20,26 @@ import Data.String.CodeUnits (charAt)
 import Data.Tuple (Tuple(..))
 import Record.Unsafe.Union (unsafeUnion)
 
+newtype Route
+  = Route
+  { methods :: Array String
+  , path :: String
+  , paramIndexes :: Map String Int
+  }
+
+derive instance eqRoute :: Eq Route
+
+derive instance ordRoute :: Ord Route
+
+emptyRoute :: Route
+emptyRoute = Route { methods: [], path: "", paramIndexes: Map.empty }
+
 newtype Router context request response
   = Router
-  { routeMap :: Map String (request -> Context context -> response)
+  { routeMap :: Map Route (request -> Context context -> response)
   , fallback :: response
   , requestToPath :: request -> String
+  , requestToMethod :: request -> String
   , requestToContext :: request -> Record context
   }
 
@@ -31,54 +49,75 @@ type Context r
     | r
     }
 
+makeRoute :: String -> Array String -> Route
+makeRoute path methods =
+  let
+    pattern = Pattern "/"
+
+    params = String.split pattern path
+
+    paramIndexes = foldrWithIndex (\i new acc -> if charAt 0 new == Just ':' then Map.insert (String.drop 1 new) i acc else acc) Map.empty params
+  in
+    Route { path, methods, paramIndexes }
+
+type RequestToPath request
+  = request -> String
+
+type RequestToMethod request
+  = request -> String
+
+type RequestToContext request context
+  = request -> Record context
+
 makeRouter ::
   forall context request response.
-  Map String (request -> Context context -> response) ->
+  Map Route (request -> Context context -> response) ->
   response ->
-  (request -> String) ->
-  (request -> Record context) ->
+  RequestToPath request ->
+  RequestToMethod request ->
+  RequestToContext request context ->
   Router context request response
-makeRouter routeMap fallback requestToPath requestToContext = Router { routeMap, fallback, requestToPath, requestToContext }
+makeRouter routeMap fallback requestToPath requestToMethod requestToContext = Router { routeMap, fallback, requestToPath, requestToMethod, requestToContext }
 
 route :: forall context request response. Router context request response -> request -> response
-route (Router { routeMap, requestToPath, requestToContext, fallback }) request =
+route (Router { routeMap, requestToPath, requestToContext, requestToMethod, fallback }) request =
   let
     path = requestToPath request
 
     partialContext = requestToContext request
 
-    Tuple matched handler = fromMaybe ((Tuple "" (\_req _ctx -> fallback))) $ List.head $ Map.toUnfoldable $ Map.filterKeys (\k -> routeMatch k path) routeMap
+    fallbackRoute = Tuple emptyRoute (\_req _ctx -> fallback)
 
-    -- TODO match route and build params simulatanously
-    params = buildParams matched path
+    Tuple matched handler =
+      fromMaybe fallbackRoute
+        $ List.head
+        $ Map.toUnfoldable
+        $ Map.filterKeys routeMatch routeMap
+
+    params = buildParams matched
 
     context = unsafeUnion partialContext { path, params }
   in
     handler request context
   where
-  buildParams :: String -> String -> Map String String
-  buildParams matchedRoute path =
+  buildParams :: Route -> Map String String
+  buildParams (Route { paramIndexes }) =
     let
-      splitter = Pattern "/"
-
-      splitMatchedRoute = String.split splitter matchedRoute
-
-      splitPath = String.split splitter path
+      splitPath = String.split (Pattern "/") (requestToPath request)
     in
-      Map.fromFoldable
-        $ map (\(Tuple k v) -> Tuple (String.drop 1 k) v)
-        $ filter (\(Tuple p _) -> charAt 0 p == Just ':')
-        $ zip splitMatchedRoute splitPath
+      Map.mapMaybe (\v -> splitPath !! v) paramIndexes
 
-  routeMatch :: String -> String -> Boolean
-  routeMatch pattern requestUrl =
+  routeMatch :: Route -> Boolean
+  routeMatch (Route routeToMatch) =
     let
       splitter = Pattern "/"
 
-      splitPattern = String.split splitter pattern
+      splitPattern = String.split splitter (String.toLower routeToMatch.path)
 
-      splitRequestUrl = String.split splitter requestUrl
+      splitRequestUrl = String.split splitter (String.toLower (requestToPath request))
 
       zipped = zip splitPattern splitRequestUrl
+
+      methodMatch = any (\method -> method == requestToMethod request) routeToMatch.methods
     in
-      all (\(Tuple p r) -> if charAt 0 p == Just ':' then true else p == r) zipped
+      methodMatch && all (\(Tuple p r) -> if charAt 0 p == Just ':' then true else p == r) zipped
