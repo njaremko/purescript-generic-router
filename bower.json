@@ -1,0 +1,29 @@
+{
+    "name": "purescript-generic-router",
+    "license": [
+        "MIT"
+    ],
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/njaremko/purescript-generic-router"
+    },
+    "ignore": [
+        "**/.*",
+        "node_modules",
+        "bower_components",
+        "output"
+    ],
+    "dependencies": {
+        "purescript-arrays": "^v7.0.0",
+        "purescript-assert": "^v6.0.0",
+        "purescript-effect": "^v4.0.0",
+        "purescript-foldable-traversable": "^v6.0.0",
+        "purescript-lists": "^v7.0.0",
+        "purescript-maybe": "^v6.0.0",
+        "purescript-ordered-collections": "^v3.0.0",
+        "purescript-prelude": "^v6.0.0",
+        "purescript-record": "^v4.0.0",
+        "purescript-strings": "^v6.0.0",
+        "purescript-tuples": "^v7.0.0"
+    }
+}
