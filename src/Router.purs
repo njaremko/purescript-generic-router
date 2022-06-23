@@ -19,10 +19,11 @@ import Data.String as String
 import Data.String.CodeUnits (charAt)
 import Data.Tuple (Tuple(..))
 import Record.Unsafe.Union (unsafeUnion)
+import Router.Method (Method)
 
 newtype Route
   = Route
-  { methods :: Array String
+  { methods :: Array Method
   , path :: String
   , paramIndexes :: Map String Int
   }
@@ -36,10 +37,10 @@ emptyRoute = Route { methods: [], path: "", paramIndexes: Map.empty }
 
 newtype Router context request response
   = Router
-  { routeMap :: Map Route (request -> Context context -> response)
-  , fallback :: response
+  { routes :: Map Route (request -> Context context -> response)
+  , fallbackResponse :: response
   , requestToPath :: request -> String
-  , requestToMethod :: request -> String
+  , requestToMethod :: request -> Method
   , requestToContext :: request -> Record context
   }
 
@@ -49,8 +50,8 @@ type Context r
     | r
     }
 
-makeRoute :: String -> Array String -> Route
-makeRoute path methods =
+makeRoute :: { path :: String, methods :: Array Method } -> Route
+makeRoute { path, methods } =
   let
     pattern = Pattern "/"
 
@@ -60,39 +61,34 @@ makeRoute path methods =
   in
     Route { path, methods, paramIndexes }
 
-type RequestToPath request
-  = request -> String
-
-type RequestToMethod request
-  = request -> String
-
-type RequestToContext request context
-  = request -> Record context
-
 makeRouter ::
   forall context request response.
-  Map Route (request -> Context context -> response) ->
-  response ->
-  RequestToPath request ->
-  RequestToMethod request ->
-  RequestToContext request context ->
+  { routes :: Map Route (request -> Context context -> response)
+  , fallbackResponse :: response
+  , requestToPath :: request -> String
+  , requestToMethod :: request -> Method
+  , requestToContext :: request -> Record context
+  } ->
   Router context request response
-makeRouter routeMap fallback requestToPath requestToMethod requestToContext = Router { routeMap, fallback, requestToPath, requestToMethod, requestToContext }
+makeRouter { routes, fallbackResponse, requestToPath, requestToMethod, requestToContext } =
+  Router
+    { routes, fallbackResponse, requestToPath, requestToMethod, requestToContext
+    }
 
 route :: forall context request response. Router context request response -> request -> response
-route (Router { routeMap, requestToPath, requestToContext, requestToMethod, fallback }) request =
+route (Router { routes, requestToPath, requestToContext, requestToMethod, fallbackResponse }) request =
   let
     path = requestToPath request
 
     partialContext = requestToContext request
 
-    fallbackRoute = Tuple emptyRoute (\_req _ctx -> fallback)
+    fallbackRoute = Tuple emptyRoute (\_req _ctx -> fallbackResponse)
 
     Tuple matched handler =
       fromMaybe fallbackRoute
         $ List.head
         $ Map.toUnfoldable
-        $ Map.filterKeys routeMatch routeMap
+        $ Map.filterKeys routeMatch routes
 
     params = buildParams matched
 

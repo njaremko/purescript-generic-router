@@ -1,20 +1,7 @@
-# Generic Router
-
-This package provides a generic router, you just need to provide a function 
-that can parse a path from an arbitrary request, and optionally parse arbitrary context out of a request
-
-# How to use
-The following is a simple example, but this router can support arbitrary requests, responses, and request contexts. 
-
-You can find more examples in `/examples` or `/test`
-
-```purescript
-module Main
-  ( main
-  ) where
+module Simple where
 
 import Prelude
-import Router (makeRoute, makeRouter, route)
+import Router as Router
 import Data.Map as Map
 import Data.Tuple (Tuple(..))
 import Effect (Effect)
@@ -24,7 +11,7 @@ import Test.Assert (assert)
 testRouteMatch :: Effect Unit
 testRouteMatch = do
   let
-    route1 = makeRoute { path: "/apples", methods: [ Method.GET ] }
+    route1 = Router.makeRoute { path: "/apples", methods: [ Method.GET ] }
 
     routes = (Map.fromFoldable [ Tuple route1 (\_req _ctx -> "Hello!") ])
 
@@ -37,7 +24,7 @@ testRouteMatch = do
     requestToContext = (\_req -> {})
 
     router =
-      makeRouter
+      Router.makeRouter
         { routes
         , fallbackResponse
         , requestToPath
@@ -45,6 +32,5 @@ testRouteMatch = do
         , requestToContext
         }
 
-    resp = route router ""
+    resp = Router.route router ""
   assert $ resp == "Hello!"
-```
