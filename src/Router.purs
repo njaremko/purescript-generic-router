@@ -19,39 +19,35 @@ import Data.Tuple (Tuple(..))
 
 newtype GenericRouter context request response
   = Router
-  { routeMap :: Map String (request -> context -> response)
+  { routeMap :: Map String (request -> Context context -> response)
   , fallback :: response
-  , requestToPath :: request -> String
-  , requestToContext :: request -> context
+  , requestToContext :: request -> Context context
   }
 
 type Router
-  = GenericRouter Context
+  = GenericRouter ( params :: Map String String )
 
-type Context
+type Context r
   = { path :: String
-    , params :: Map String String
+    | r
     }
 
 makeRouter ::
   forall context request response.
-  Map String (request -> context -> response) ->
+  Map String (request -> Context context -> response) ->
   response ->
-  (request -> String) ->
-  (request -> context) ->
+  (request -> Context context) ->
   GenericRouter context request response
-makeRouter routeMap fallback requestToPath requestToContext = Router { routeMap, fallback, requestToPath, requestToContext }
+makeRouter routeMap fallback requestToContext = Router { routeMap, fallback, requestToContext }
 
 route :: forall context request response. GenericRouter context request response -> request -> response
-route router@(Router { requestToPath, requestToContext }) request =
+route router@(Router { requestToContext }) request =
   let
-    path = requestToPath request
-
-    context = requestToContext request
+    context@{ path } = requestToContext request
   in
     (findMatch router path) request context
   where
-  findMatch :: GenericRouter context request response -> String -> (request -> context -> response)
+  findMatch :: GenericRouter context request response -> String -> (request -> Context context -> response)
   findMatch (Router { routeMap, fallback }) path =
     let
       handler = fromMaybe (\_req -> \_ctx -> fallback) $ List.head $ Map.values $ Map.filterKeys (\k -> routeMatch k path) routeMap
@@ -61,9 +57,11 @@ route router@(Router { requestToPath, requestToContext }) request =
   routeMatch :: String -> String -> Boolean
   routeMatch pattern requestUrl =
     let
-      splitPattern = String.split (Pattern "/") pattern
+      splitter = Pattern "/"
 
-      splitRequestUrl = String.split (Pattern "/") requestUrl
+      splitPattern = String.split splitter pattern
+
+      splitRequestUrl = String.split splitter requestUrl
 
       zipped = zip splitPattern splitRequestUrl
     in

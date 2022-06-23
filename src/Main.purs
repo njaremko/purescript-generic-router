@@ -1,6 +1,5 @@
 module Main
-  ( indexRoute
-  , main
+  ( main
   ) where
 
 import Prelude
@@ -45,14 +44,13 @@ main = do
       makeRouter
         routes
         (pure $ createResponse "Not Found" (Just { headers: Just $ Map.fromFoldable [ Tuple "content-type" "text/plain" ], status: Just 404, statusText: Just "Not Found" }))
-        (\req -> replace (Pattern baseUrl) (Replacement "") $ Request.url req)
-        (\req -> { path: replace (Pattern baseUrl) (Replacement "") $ Request.url req, params: mempty })
+        (\req -> { path: replace (Pattern baseUrl) (Replacement "") $ Request.url req })
 
     handler = Router.route router
   listener <- Deno.listen { port: 3001 }
   launchAff_ $ serveListener listener handler Nothing
 
-indexRoute :: Request → Context -> Aff Response
+indexRoute :: Request → Context () -> Aff Response
 indexRoute _req _ctx =
   let
     payload =
@@ -73,8 +71,8 @@ indexRoute _req _ctx =
   in
     pure $ createResponse payload response_options
 
-jsonEcho :: Request → Context -> Aff Response
-jsonEcho req ctx = do
+jsonEcho :: Request → Context () -> Aff Response
+jsonEcho req _ctx = do
   payload <- Request.json req
   let
     headers = Just $ Map.fromFoldable [ hContentTypeJson ]
